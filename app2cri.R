@@ -12,10 +12,10 @@ library(bslib)     # Allows choosing different Shiny themes.
 # Reading the summary tables:
 
 # Online:
-url_tr = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/tab_cri.rds?raw=true"
+url_tr = "https://github.com/wrmfstat/simsurvcop/blob/main/tab_cri.rds?raw=true"
 tr = try(readRDS(url(url_tr)), TRUE)
 # Locally:
-# tr = readRDS("res_exc_cop/tab_cri.rds")
+# tr = readRDS("tab_cri.rds")
 
 # Vectors for simulation scenarios (note that results are divided by
 # regression class and true correlation):
@@ -23,9 +23,9 @@ tr = try(readRDS(url(url_tr)), TRUE)
 # reg = c("PH", "PO", "YP")
 # cor = c(0.25, 0.50, 0.75)
 # gcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
-gbsl = c("EW", "W")
+# gbsl = c("EW", "W")
 fcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
-fbsl = c("BP", "PE", "W")
+fbsl = c("W", "BP", "PE")
 
 # Loading the user interface to apply boxplots and tables:
 
@@ -38,7 +38,9 @@ ui = fluidPage(
   fluidRow(
     column(3, offset=2, selectInput(
       inputId="reg", choices=c("PH", "PO", "YP"),
-      label="Generated/Fitted Regression Class", selected="PH"),
+      # label="Generated/Fitted Regression Class",
+      label="Regression Class",
+      selected="PH"),
     ),
     column(3, selectInput(
       inputId="cor", choices=c(0.25, 0.5, 0.75),
@@ -57,23 +59,16 @@ ui = fluidPage(
     
     # Inserting the boxplots for the chosen input:
     titlePanel("AIC Values for Fitted Survival Copula Models"),
-    fluidRow(column(width=2,
+    fluidRow(column(width=2, offset=1,
                     # checkboxGroupInput(
-                    #   inputId="gcops", label="Generated Copula",
-                    #   choices=gcop, selected=gcop, inline=T),
-                    checkboxGroupInput(
-                      inputId="gbsls", label="Generated Baseline",
-                      choices=gbsl, selected="W", inline=T),
+                    #   inputId="gbsls", label="Generated Baseline",
+                    #   choices=gbsl, selected="W", inline=T),
                     checkboxGroupInput(
                       inputId="fcops", label="Fitted Copula",
                       choices=fcop, selected=fcop, inline=T),
                     checkboxGroupInput(
                       inputId="fbsls", label="Fitted Baseline",
                       choices=fbsl, selected=fbsl, inline=T),
-                    # checkboxGroupInput(
-                    #   inputId="coefs", label="Model Parameters",
-                    #   selected=coef, inline=T,
-                    #   choiceNames=coef_uc, choiceValues=coef),
     ),
     column(width=8, mainPanel(plotOutput("aicPlots"))),
     
@@ -89,7 +84,7 @@ ui = fluidPage(
 
 server = function(input, output, session){
   # Reading online data (make the project public later!):
-  url = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cri.rds?raw=true"
+  url = "https://github.com/wrmfstat/simsurvcop/blob/main/res_cri.rds?raw=true"
   
   # Choosing results' data from a given input:
   bigdata = reactive({
@@ -110,31 +105,30 @@ server = function(input, output, session){
     # Filtering our data according to selected options:
     df = df %>% filter(
       Reg.Class %in% input$reg, TrueTau %in% input$cor,
-      G.Copula %in% input$gcops, G.Baseline %in% input$gbsls,
+      G.Copula %in% input$gcops, # G.Baseline %in% input$gbsls,
       F.Copula %in% input$fcops, F.Baseline %in% input$fbsls)
     
     # Plotting the boxplots for the relative bias:
     ggplot(df, aes(x=F.Copula, y=AIC)) + geom_boxplot() +
       geom_abline(intercept=0, slope=0,
                   linetype="dashed", color="black") +
-      facet_wrap(~ G.Baseline + F.Baseline) +
+      # facet_wrap(~ G.Baseline + F.Baseline) +
+      facet_wrap(~F.Baseline) +
       labs(x="Fitted Copula", y="AIC") +
       theme(legend.position="bottom")
   },
-  # width = 1000, height = 450)
   width = 900, height = 400)
   
   output$aicResults = renderDataTable({
     # Fixing on another object to allow updates:
     dft = sumdata() %>% filter(
       Reg.Class %in% input$reg, TrueTau %in% input$cor,
-      G.Copula %in% input$gcops, G.Baseline %in% input$gbsls,
+      G.Copula %in% input$gcops, # G.Baseline %in% input$gbsls,
       F.Copula %in% input$fcops, F.Baseline %in% input$fbsls)
-    dft = dft[,-c(1,2,3,8,10)] %>% mutate(
+    dft = dft[,-c(1,5,7)] %>% mutate(
       across(where(is.numeric), round, 4))
   },
-  # options=list(pageLength=3, lengthMenu=c(3, 6, 30)))
-  options=list(pageLength=15, lengthMenu=c(15, 30))
+  options=list(pageLength=15, lengthMenu=c(3, 15))
   )
 }
 

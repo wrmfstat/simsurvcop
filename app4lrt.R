@@ -13,24 +13,16 @@ library(bslib)     # Allows choosing different Shiny themes.
 # model class used for generation:
 
 # Online:
-# url_ph = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_reg/tab_lrt_ph.rds?raw=true"
-# url_po = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_reg/tab_lrt_po.rds?raw=true"
-# url_yp = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_reg/tab_lrt_yp.rds?raw=true"
-url = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_reg/tab_lrt.rds?raw=true"
-# tlrt_ph = try(readRDS(url(url_ph)), TRUE)
-# tlrt_po = try(readRDS(url(url_po)), TRUE)
-# tlrt_yp = try(readRDS(url(url_yp)), TRUE)
+url = "https://github.com/wrmfstat/simsurvcop/blob/main/tab_lrt.rds?raw=true"
 tlrt = try(readRDS(url(url)), TRUE)
 # Locally:
-# tlrt_ph = readRDS(file="res_exc_reg/tab_lrt_ph.rds")
-# tlrt_po = readRDS(file="res_exc_reg/tab_lrt_po.rds")
-# tlrt_yp = readRDS(file="res_exc_reg/tab_lrt_yp.rds")
-# tlrt = readRDS(file="res_exc_reg/tab_lrt.rds")
+# tlrt = readRDS(file="tab_lrt.rds")
 
-# Reuniting all summarized results above and excluding some cases:
-
-# tlrt = rbind.data.frame(tlrt_ph, tlrt_po, tlrt_yp)
-tlrt = tlrt[-which(tlrt$G.Baseline=="EW" & tlrt$F.Baseline=="W"),]
+# Since it is a grouped data frame, we need to "ungroup" it first in
+# order to use it:
+class(tlrt)
+tlrt = ungroup(tlrt)
+class(tlrt)
 
 # Vectors for simulation scenarios (note that results are divided by
 # regression class and true correlation):
@@ -40,7 +32,9 @@ tlrt = tlrt[-which(tlrt$G.Baseline=="EW" & tlrt$F.Baseline=="W"),]
 # gcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
 gbsl = c("EW", "W")
 # fcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
-fbsl = c("BP", "PE", "W")
+fbsl = c("W", "BP", "PE")
+
+freg = c("PH", "PO") # Only for LR results.
 
 # Loading the user interface to apply the summary tables:
 
@@ -51,7 +45,7 @@ ui = fluidPage(
   # Creating a box for the combination choice:
   headerPanel("LR Tests for Nested Survival Copula Models"),
   fluidRow(
-    column(3, selectInput(
+    column(3, offset=2, selectInput(
       inputId="gcops",
       choices=c("AMH", "Clayton", "Frank", "GH", "Joe"),
       label="Generated Copula", selected="AMH"),
@@ -69,32 +63,26 @@ ui = fluidPage(
       inputId="greg", choices=c("PH", "PO", "YP"),
       label="Generated Class", selected="PH"),
     ),
-    column(3, selectInput(
-      inputId="freg", choices=c("PH", "PO"),
-      label="Fitted Class, Nested to YP", selected="PH"),
-    ),
+    # column(3, selectInput(
+    #   inputId="freg", choices=c("PH", "PO"),
+    #   label="Fitted Class, Nested to YP", selected="PH"),
+    # ),
     
     # Summary tables for the chosen input:
     # titlePanel("LR Tests for Fitted Survival Copula Models"),
-    fluidRow(column(width=2, # offset=1,
+    fluidRow(column(width=2, offset=1,
                     # checkboxGroupInput(
-                    #   inputId="gcops", label="Generated Copula",
-                    #   choices=gcop, selected=gcop, inline=T),
-                    checkboxGroupInput(
-                      inputId="gbsls", label="Generated Baseline",
-                      choices=gbsl, selected="W", inline=T),
-                    # checkboxGroupInput(
-                    #   inputId="fcops", label="Fitted Copula",
-                    #   choices=fcop, selected=fcop, inline=T),
+                    #   inputId="gbsls", label="Generated Baseline",
+                    #   choices=gbsl, selected="W", inline=T),
                     checkboxGroupInput(
                       inputId="fbsls", label="Fitted Baseline",
                       choices=fbsl, selected=fbsl, inline=T),
-                    # checkboxGroupInput(
-                    #   inputId="coefs", label="Model Parameters",
-                    #   selected=coef, inline=T,
-                    #   choiceNames=coef_uc, choiceValues=coef),
+                    checkboxGroupInput(
+                      inputId="freg",
+                      label="Fitted Class, Nested to YP",
+                      choices=freg, selected=freg, inline=T),
     ),
-    column(width=8, offset=1,
+    column(width=8, # offset=1,
            mainPanel(dataTableOutput("lrResults"))))
   )
 )
@@ -112,14 +100,15 @@ server = function(input, output, session){
   output$lrResults = renderDataTable({
     # Fixing on another object to allow updates:
     dft = sumdata() %>% filter(
-      Copula %in% input$gcops, TrueTau %in% input$cor,
+      TrueTau %in% input$cor, Copula %in% input$gcops,
       G.Reg.Class %in% input$greg, F.Reg.Class %in% input$freg,
-      G.Baseline %in% input$gbsls, F.Baseline %in% input$fbsls)
-    dft = dft[,-c(1,2,3)] %>% mutate(
+      # G.Baseline %in% input$gbsls,
+      F.Baseline %in% input$fbsls)
+    dft = dft[,-1] %>% mutate(
       across(where(is.numeric), round, 4))
   },
   # options=list(pageLength=3, lengthMenu=c(3, 6, 30)))
-  options=list(pageLength=3, lengthMenu=c(3, 6)))
+  options=list(pageLength=6, lengthMenu=c(2,6)))
 }
 
 # Running all data set at a single application:

@@ -1,4 +1,4 @@
-#########################################################################
+####################################################################
 
 # Loading all required packages:
 
@@ -12,12 +12,12 @@ library(bslib)     # Allows choosing different Shiny themes.
 # Reading the summary tables:
 
 # Online:
-url_tr = "https://github.com/wrmfstat/simsurvcop/blob/master/tab_reg.rds?raw=true"
+url_tr = "https://github.com/wrmfstat/simsurvcop/blob/main/tab_reg.rds?raw=true"
 tr = try(readRDS(url(url_tr)), TRUE)
 # Locally:
-# tr = readRDS("res_exc_cop/tab_reg.rds")
+# tr = readRDS("tab_reg.rds")
 
-tr = tr[-c(7201:7203),]
+colnames(tr)[14] = "CP"
 
 # Recoding all parameter names, to their corresponding "unicode", in
 # the summary table:
@@ -52,10 +52,11 @@ tr$Parameter = case_when(
 # regression class and true correlation):
 
 # tau = c(0.25, 0.50, 0.75)
-gcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
-gbsl = c("EW", "W")
-fcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
-fbsl = c("BP", "PE", "W")
+# marg = c("M1", "M2")
+# gcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
+# gbsl = c("EW", "W")
+# fcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
+fbsl = c("W", "BP", "PE")
 # reg = c("PH", "PO", "YP")
 
 # Loading the user interface to apply boxplots and tables:
@@ -67,20 +68,25 @@ ui = fluidPage(
   # Creating a box for the combination choice:
   headerPanel("RB and MC Results for Survival Copula Models"),
   fluidRow(
-    column(3, selectInput(
+    column(width=2, offset=1, selectInput(
       inputId="reg", choices=c("PH", "PO", "YP"),
-      label="Generated/Fitted Regression Class", selected="PH"),
+      # label="Generated/Fitted Regression Class",
+      label="Regression Class", selected="PH"),
     ),
-    column(3, selectInput(
+    column(2, selectInput(
       inputId="cor", choices=c(0.25, 0.5, 0.75),
       label="Correlation", selected = 0.25),
     ),
-    column(3, selectInput(
+    column(2, selectInput(
+      inputId="mar", choices=c("M1", "M2"),
+      label="Margin", selected="M1"),
+    ),
+    column(2, selectInput(
       inputId="gcops",
       choices=c("AMH", "Clayton", "Frank", "GH", "Joe"),
       label="Generated Copula", selected="AMH"),
     ),
-    column(3, selectInput(
+    column(2, selectInput(
       inputId="fcops",
       choices=c("AMH", "Clayton", "Frank", "GH", "Joe"),
       label="Fitted Copula", selected="AMH"),
@@ -88,29 +94,19 @@ ui = fluidPage(
     
     # Inserting the boxplots for the chosen input:
     titlePanel("Relative Bias for Regression Parameter Estimates"),
-    fluidRow(column(width=2,
+    fluidRow(column(width=2, # offset=1,
                     # checkboxGroupInput(
-                    #   inputId="gcops", label="Generated Copula",
-                    #   choices=gcop, selected=gcop, inline=T),
-                    checkboxGroupInput(
-                      inputId="gbsls", label="Generated Baseline",
-                      choices=gbsl, selected="W", inline=T),
-                    # checkboxGroupInput(
-                    #   inputId="fcops", label="Fitted Copula",
-                    #   choices=fcop, selected=fcop, inline=T),
+                    #   inputId="gbsls", label="Generated Baseline",
+                    #   choices=gbsl, selected="W", inline=T),
                     checkboxGroupInput(
                       inputId="fbsls", label="Fitted Baseline",
                       choices=fbsl, selected=fbsl, inline=T),
-                    # checkboxGroupInput(
-                    #   inputId="coefs", label="Model Parameters",
-                    #   selected=coef, inline=T,
-                    #   choiceNames=coef_uc, choiceValues=coef),
     ),
     column(width=8, mainPanel(plotOutput("rbPlots"))),
 
     # Summary tables for the chosen input:
     titlePanel("Monte Carlo Results"),
-    fluidRow(column(width=8, offset=1,
+    fluidRow(column(width=9, offset=1,
                     mainPanel(dataTableOutput("tabResults"))))
     )
   )
@@ -119,16 +115,16 @@ ui = fluidPage(
 # Loading the corresponding server:
 
 server = function(input, output, session){
-  # Reading online data (make the project public later!):
-  url_PH_25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_ph025.rds?raw=true"
-  url_PO_25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_po025.rds?raw=true"
-  url_YP_25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_yp025.rds?raw=true"
-  url_PH_50 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_ph050.rds?raw=true"
-  url_PO_50 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_po050.rds?raw=true"
-  url_YP_50 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_yp050.rds?raw=true"
-  url_PH_75 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_ph075.rds?raw=true"
-  url_PO_75 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_po075.rds?raw=true"
-  url_YP_75 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_yp075.rds?raw=true"
+  # Reading online data:
+  url_PH_25 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_ph025.rds?raw=true"
+  url_PO_25 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_po025.rds?raw=true"
+  url_YP_25 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_yp025.rds?raw=true"
+  url_PH_50 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_ph050.rds?raw=true"
+  url_PO_50 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_po050.rds?raw=true"
+  url_YP_50 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_yp050.rds?raw=true"
+  url_PH_75 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_ph075.rds?raw=true"
+  url_PO_75 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_po075.rds?raw=true"
+  url_YP_75 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_yp075.rds?raw=true"
   
   # Choosing results' data from a given input:
   bigdata = reactive({
@@ -205,10 +201,6 @@ server = function(input, output, session){
       df$Parameter=="phi[2,2]" & df$Reg.Class=="YP"~"beta^(L)[2,2]")
     
     # If we want PH or PO models:
-    # if(sum(which(df$Reg.Class=="YP"))==0){
-    # if(input$comb=="PH x 0.25" | input$comb=="PO x 0.25" |
-    #    input$comb=="PH x 0.5" | input$comb=="PO x 0.5" |
-    #    input$comb=="PH x 0.75" | input$comb=="PO x 0.75"){
     if(input$reg=="PH" | input$reg=="PO"){
       # Saving separately those new names:
       coef = c("beta[1,1]", "beta[2,1]",
@@ -216,21 +208,36 @@ server = function(input, output, session){
       
       # Filtering our data according to selected options:
       df = df %>% filter(
-        G.Copula %in% input$gcops, G.Baseline %in% input$gbsls,
+        Margin %in% input$mar,
+        G.Copula %in% input$gcops, # G.Baseline %in% input$gbsls,
         F.Copula %in% input$fcops, F.Baseline %in% input$fbsls,
         # Parameter %in% input$coefs)
         Parameter %in% coef)
       
       # Plotting the boxplots for the relative bias:
-      ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
-        geom_abline(intercept=0, slope=0,
-                    linetype="dashed", color="black") +
-        facet_wrap(~ G.Baseline + F.Baseline) +
-        labs(x="Coefficients", y="Relative Bias (%)") +
-        scale_x_discrete(labels = c(
-          expression(paste(beta[11])), expression(paste(beta[21])),
-          expression(paste(beta[12])), expression(paste(beta[22])))) +
-        theme(legend.position="bottom")
+      if(input$mar=="M1"){
+        ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
+          geom_abline(intercept=0, slope=0,
+                      linetype="dashed", color="black") +
+          # facet_wrap(~ G.Baseline + F.Baseline) +
+          facet_wrap(~F.Baseline) +
+          labs(x="Coefficients", y="Relative Bias (%)") +
+          scale_x_discrete(labels = c(
+            expression(paste(beta[11])), expression(paste(beta[21])))) +
+          theme(legend.position="bottom")
+      }
+      else{
+        ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
+          geom_abline(intercept=0, slope=0,
+                      linetype="dashed", color="black") +
+          # facet_wrap(~ G.Baseline + F.Baseline) +
+          facet_wrap(~F.Baseline) +
+          labs(x="Coefficients", y="Relative Bias (%)") +
+          scale_x_discrete(labels = c(
+            expression(paste(beta[12])), expression(paste(beta[22])))) +
+          theme(legend.position="bottom")
+      }
+      
     }
     # If we want YP models:
     else{
@@ -242,27 +249,41 @@ server = function(input, output, session){
       
       # Filtering our data according to selected options:
       df = df %>% filter(
-        G.Copula %in% input$gcops, G.Baseline %in% input$gbsls,
+        Margin %in% input$mar,
+        G.Copula %in% input$gcops, # G.Baseline %in% input$gbsls,
         F.Copula %in% input$fcops, F.Baseline %in% input$fbsls,
         # Parameter %in% input$coefs)
         Parameter %in% coef)
       
       # Plotting the boxplots for the relative bias:
-      ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
-        geom_abline(intercept=0, slope=0,
-                    linetype="dashed", color = "black") +
-        facet_wrap(~ G.Baseline + F.Baseline) +
-        labs(x="Coefficients", y="Relative Bias (%)") +
-        scale_x_discrete(labels = c(
-          expression(paste(beta[11]^"(S)")),
-          expression(paste(beta[21]^"(S)")),
-          expression(paste(beta[12]^"(S)")),
-          expression(paste(beta[22]^"(S)")),
-          expression(paste(beta[11]^"(L)")),
-          expression(paste(beta[21]^"(L)")),
-          expression(paste(beta[12]^"(L)")),
-          expression(paste(beta[22]^"(L)")))) +
-        theme(legend.position="bottom")
+      if(input$mar=="M1"){
+        ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
+          geom_abline(intercept=0, slope=0,
+                      linetype="dashed", color = "black") +
+          # facet_wrap(~ G.Baseline + F.Baseline) +
+          facet_wrap(~ F.Baseline) +
+          labs(x="Coefficients", y="Relative Bias (%)") +
+          scale_x_discrete(labels = c(
+            expression(paste(beta[11]^"(S)")),
+            expression(paste(beta[21]^"(S)")),
+            expression(paste(beta[11]^"(L)")),
+            expression(paste(beta[21]^"(L)")))) +
+          theme(legend.position="bottom")
+      }
+      else{
+        ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
+          geom_abline(intercept=0, slope=0,
+                      linetype="dashed", color = "black") +
+          # facet_wrap(~ G.Baseline + F.Baseline) +
+          facet_wrap(~ F.Baseline) +
+          labs(x="Coefficients", y="Relative Bias (%)") +
+          scale_x_discrete(labels = c(
+            expression(paste(beta[12]^"(S)")),
+            expression(paste(beta[22]^"(S)")),
+            expression(paste(beta[12]^"(L)")),
+            expression(paste(beta[22]^"(L)")))) +
+          theme(legend.position="bottom")
+      }
     }
   },
   # width = 1000, height = 450)
@@ -280,10 +301,11 @@ server = function(input, output, session){
                   "\u03B2\U2081\U2082", "\u03B2\U2082\U2082")
       # Fixing on another object to allow updates:
       dft = sumdata() %>% filter(
-        G.Copula %in% input$gcops, G.Baseline %in% input$gbsls,
+        Margin %in% input$mar,
+        G.Copula %in% input$gcops, # G.Baseline %in% input$gbsls,
         F.Copula %in% input$fcops, F.Baseline %in% input$fbsls,
         Parameter %in% coef_uc)
-      dft = dft[,-c(1,2,3,8)] %>% mutate(
+      dft = dft[,-c(1,2,6)] %>% mutate(
         across(where(is.numeric), round, 4))
     }
     else{
@@ -295,15 +317,16 @@ server = function(input, output, session){
       
       # Summary tables:
       dft = sumdata() %>% filter(
-        G.Copula %in% input$gcops, G.Baseline %in% input$gbsls,
+        Margin %in% input$mar,
+        G.Copula %in% input$gcops, # G.Baseline %in% input$gbsls,
         F.Copula %in% input$fcops, F.Baseline %in% input$fbsls,
         Parameter %in% coef_uc)
-      dft = dft[,-c(1,2,3,8)] %>% mutate(
+      dft = dft[,-c(1,2,6)] %>% mutate(
         across(where(is.numeric), round, 4))
     }
   },
   # options=list(pageLength=12, lengthMenu=c(12, 24, 120))
-  options=list(pageLength=24, lengthMenu=c(24, 48, 240)))
+  options=list(pageLength=6, lengthMenu=c(2, 6)))
 }
 
 # Running all 9 data sets at a single application:

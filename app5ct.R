@@ -11,9 +11,10 @@ library(bslib)     # Allows choosing different Shiny themes.
 
 # Reading all crossing time estimation results:
 
-url_tct = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_ct/tab_ct.rds?raw=true"
+url_tct = "https://github.com/wrmfstat/simsurvcop/blob/main/tab_ct.rds?raw=true"
 tct = try(readRDS(url(url_tct)), TRUE)
-tct = as.data.frame(tct)
+
+colnames(tct)[8] = "ARB"
 
 # Vectors for simulation scenarios (note that results are divided by
 # regression class and true correlation):
@@ -23,7 +24,7 @@ tct = as.data.frame(tct)
 # gcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
 gbsl = c("EW", "W")
 # fcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
-fbsl = c("BP", "PE", "W")
+fbsl = c("W", "BP", "PE")
 
 # Loading the user interface to apply the summary tables:
 
@@ -32,32 +33,34 @@ ui = fluidPage(
   theme = bs_theme(bootswatch="darkly"),
   
   # Creating a box for the combination choice:
-  headerPanel("Estimated Crossing Times for Survival Copula Models"),
+  headerPanel(
+    "Estimated Crossing Times for Survival Copula Models"),
   fluidRow(
-    column(width=3, offset=3, selectInput(
+    column(width=4, offset=2, selectInput(
       inputId="margs",
       choices=c("M1", "M2"),
       label="Margin", selected="M1"),
     ),
-    column(3, selectInput(
+    column(4, selectInput(
       inputId="gcops",
       choices=c("AMH", "Clayton", "Frank", "GH", "Joe"),
-      label="Generated Copula", selected="AMH"),
+      # label="Generated Copula",
+      label="Copula", selected="AMH"),
     ),
-    # column(3, selectInput(
+    # column(4, selectInput(
     #   inputId="cor", choices=c(0.25, 0.5, 0.75),
     #   label="Correlation", selected = 0.25),
     # ),
-    # column(3, selectInput(
+    # column(4, selectInput(
     #   inputId="fcops",
     #   choices=c("AMH", "Clayton", "Frank", "GH", "Joe"),
     #   label="Fitted Copula", selected="AMH"),
     # ),
-    # column(3, selectInput(
+    # column(4, selectInput(
     #   inputId="greg", choices=c("PH", "PO", "YP"),
     #   label="Generated Class", selected="PH"),
     # ),
-    # column(3, selectInput(
+    # column(4, selectInput(
     #   inputId="freg", choices=c("PH", "PO"),
     #   label="Fitted Class", selected="PH"),
     # ),
@@ -68,9 +71,9 @@ ui = fluidPage(
                     # checkboxGroupInput(
                     #   inputId="gcops", label="Generated Copula",
                     #   choices=gcop, selected=gcop, inline=T),
-                    checkboxGroupInput(
-                      inputId="gbsls", label="Generated Baseline",
-                      choices=gbsl, selected="W", inline=T),
+                    # checkboxGroupInput(
+                    #   inputId="gbsls", label="Generated Baseline",
+                    #   choices=gbsl, selected="W", inline=T),
                     # checkboxGroupInput(
                     #   inputId="fcops", label="Fitted Copula",
                     #   choices=fcop, selected=fcop, inline=T),
@@ -96,7 +99,7 @@ ui = fluidPage(
 
 server = function(input, output, session){
   # Reading online data:
-  url_ct = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_ct/res_ct.rds?raw=true"
+  url_ct = "https://github.com/wrmfstat/simsurvcop/blob/main/res_ct.rds?raw=true"
   
   bigdata = reactive({
     try(readRDS(url(url_ct)), TRUE)
@@ -113,15 +116,20 @@ server = function(input, output, session){
     # Fixing on another object to allow updates:
     df = bigdata()
     
+    # Reordering the levels of fitted baselines:
+    df$F.Baseline = relevel(as.factor(df$F.Baseline), ref="W")
+      
     # Filtering our data according to selected options:
     df = df %>% filter(
       Margin %in% input$margs, Copula %in% input$gcops,
-      G.Baseline %in% input$gbsls, F.Baseline %in% input$fbsls)
+      # G.Baseline %in% input$gbsls,
+      F.Baseline %in% input$fbsls)
     
     # Plotting the boxplots for the crossing time estimates:
     ggplot(df) + geom_boxplot(aes(x=Copula, y=RB)) +
       xlab("Copula") + ylab("Relative Bias") +
-      facet_wrap(~ G.Baseline + F.Baseline) +
+      # facet_wrap(~ G.Baseline + F.Baseline) +
+      facet_wrap(~F.Baseline) +
       geom_hline(yintercept=0, linetype="dashed",
                  color="black") +
       theme(legend.position="bottom")
@@ -135,12 +143,12 @@ server = function(input, output, session){
       Margin %in% input$margs,
       Copula %in% input$gcops, # TrueTau %in% input$cor,
       # G.Reg.Class %in% input$greg, F.Reg.Class %in% input$freg,
-      G.Baseline %in% input$gbsls, F.Baseline %in% input$fbsls)
-    dft = dft[,-c(2,3,4,5,9)] %>% mutate(
+      # G.Baseline %in% input$gbsls,
+      F.Baseline %in% input$fbsls)
+    dft = dft[,-c(2,3,6)] %>% mutate(
       across(where(is.numeric), round, 4))
   },
-  # options=list(pageLength=3, lengthMenu=c(3, 6, 30)))
-  options=list(pageLength=3, lengthMenu=c(3, 6)))
+  options=list(pageLength=3, lengthMenu=3))
 }
 
 # Running all data set at a single application:
