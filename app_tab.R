@@ -16,33 +16,23 @@ library(shinydashboard)
 # Reading the summary tables:
 
 # Online:
-url_tr = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/tab_reg.rds?raw=true"
+url_tr = "https://github.com/wrmfstat/simsurvcop/blob/main/tab_reg.rds?raw=true"
 tr = try(readRDS(url(url_tr)), TRUE)
-url_tc = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/tab_cri.rds?raw=true"
+url_tc = "https://github.com/wrmfstat/simsurvcop/blob/main/tab_cri.rds?raw=true"
 tc = try(readRDS(url(url_tc)), TRUE)
-url_tt = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/tab_cor.rds?raw=true"
+url_tt = "https://github.com/wrmfstat/simsurvcop/blob/main/tab_tau.rds?raw=true"
 tt = try(readRDS(url(url_tt)), TRUE)
-url_tlrt = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_reg/tab_lrt.rds?raw=true"
+url_tlrt = "https://github.com/wrmfstat/simsurvcop/blob/main/tab_lrt.rds?raw=true"
 tlrt = try(readRDS(url(url_tlrt)), TRUE)
-url_tct = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_ct/tab_ct.rds?raw=true"
+url_tct = "https://github.com/wrmfstat/simsurvcop/blob/main/tab_ct.rds?raw=true"
 tct = try(readRDS(url(url_tct)), TRUE)
-# ...
-# Locally:
-# tr = readRDS("res_exc_cop/tab_reg.rds")
-# tc = readRDS("res_exc_cop/tab_cri.rds")
-# tt = readRDS("res_exc_cop/tab_cor.rds")
-# tlrt = readRDS(file="res_exc_reg/tab_lrt.rds")
-# tct = readRDS("res_ct/tab_ct.rds")
-# ...
 
 # Correcting some of the loaded tables:
 
-tr = tr[-c(7201:7203),]
-# "tc" has already been corrected.
-tt = tt[-c(1351:1356),]
-colnames(tt)[11] = "ARB"
-tlrt = tlrt[-which(tlrt$G.Baseline=="EW" & tlrt$F.Baseline=="W"),]
-tct = as.data.frame(tct)
+colnames(tr)[14] = "CP"
+colnames(tt)[8] = "ARB"
+tlrt = ungroup(tlrt)
+colnames(tct)[8] = "ARB"
 
 # Recoding all parameter names, to their corresponding "unicode", in
 # the summary table:
@@ -81,7 +71,7 @@ tt$Parameter = case_when(tt$Parameter=="tau" ~ "\u03C4")
 # reg = c("PH", "PO", "YP")
 # cor = c(0.25, 0.50, 0.75)
 # gcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
-gbsl = c("EW", "W")
+# gbsl = c("EW", "W")
 fcop = c("AMH", "Clayton", "Frank", "GH", "Joe")
 fbsl = c("BP", "PE", "W")
 
@@ -90,20 +80,25 @@ freg = c("PH", "PO") # Only for LR results.
 # Building each sub-interface for each tab of results:
 
 fr_tab1 = fluidRow(
-  column(3, selectInput(
+  column(width=2, offset=1, selectInput(
     inputId="reg1", choices=c("PH", "PO", "YP"),
-    label="Generated/Fitted Class", selected="PH"),
+    # label="Generated/Fitted Regression Class",
+    label="Regression Class", selected="PH"),
   ),
-  column(3, selectInput(
+  column(2, selectInput(
     inputId="cor1", choices=c(0.25, 0.5, 0.75),
     label="Correlation", selected = 0.25),
   ),
-  column(3, selectInput(
+  column(2, selectInput(
+    inputId="mar1", choices=c("M1", "M2"),
+    label="Margin", selected="M1"),
+  ),
+  column(2, selectInput(
     inputId="gcop1",
     choices=c("AMH", "Clayton", "Frank", "GH", "Joe"),
     label="Generated Copula", selected="AMH"),
   ),
-  column(3, selectInput(
+  column(2, selectInput(
     inputId="fcop1",
     choices=c("AMH", "Clayton", "Frank", "GH", "Joe"),
     label="Fitted Copula", selected="AMH"),
@@ -113,17 +108,12 @@ fr_tab1 = fluidRow(
   # titlePanel("Relative Bias for Regression Parameter Estimates"),
   fluidRow(column(
     width=2, offset=1,
-    # checkboxGroupInput(inputId="gcop1", label="Generated Copula",
-    #                    choices=gcop, selected=gcop, inline=T),
-    checkboxGroupInput(inputId="gbsl1", label="Generated Baseline",
-                       choices=gbsl, selected="W", inline=T),
-    # checkboxGroupInput(inputId="fcop1", label="Fitted Copula",
-    #                    choices=fcop, selected=fcop, inline=T),
-    checkboxGroupInput(inputId="fbsl1", label="Fitted Baseline",
-                       choices=fbsl, selected=fbsl, inline=T),
-    # checkboxGroupInput(inputId="coef1", label="Model Parameters",
-    #                    selected=coef, inline=T,
-    #                    choiceNames=coef_uc, choiceValues=coef),
+    # checkboxGroupInput(
+    #   inputId="gbsl1", label="Generated Baseline",
+    #   choices=gbsl, selected="W", inline=T),
+    checkboxGroupInput(
+      inputId="fbsl1", label="Fitted Baseline",
+      choices=fbsl, selected=fbsl, inline=T),
   ),
   column(width=8, mainPanel(plotOutput("reg_rbPlots"))),
   
@@ -137,7 +127,7 @@ fr_tab1 = fluidRow(
 fr_tab2 = fluidRow(
   column(3, offset=2, selectInput(
     inputId="reg3", choices=c("PH", "PO", "YP"),
-    label="Generated/Fitted Class", selected="PH"),
+    label="Regression Class", selected="PH"),
   ),
   column(3, selectInput(
     inputId="cor3", choices=c(0.25, 0.5, 0.75),
@@ -157,17 +147,13 @@ fr_tab2 = fluidRow(
   # Inserting the boxplots for the chosen input:
   # titlePanel("Relative Bias for Correlation Parameter Estimates"),
   fluidRow(column(width=2, offset=1,
-    # checkboxGroupInput(inputId="gcop3", label="Generated Copula",
-    #                    choices=gcop, selected=gcop, inline=T),
-    checkboxGroupInput(inputId="gbsl3", label="Generated Baseline",
-                       choices=gbsl, selected="W", inline=T),
+    # checkboxGroupInput(
+    #   inputId="gbsl3", label="Generated Baseline",
+    #   choices=gbsl, selected="W", inline=T),
     checkboxGroupInput(inputId="fcop3", label="Fitted Copula",
                        choices=fcop, selected=fcop, inline=T),
     checkboxGroupInput(inputId="fbsl3", label="Fitted Baseline",
                        choices=fbsl, selected=fbsl, inline=T),
-    # checkboxGroupInput(inputId="coef3", label="Model Parameters",
-    #                    selected=coef, inline=T,
-    #                    choiceNames=coef_uc, choiceValues=coef),
   ),
   column(width=8, mainPanel(plotOutput("cor_rbPlots"))),
   
@@ -181,7 +167,9 @@ fr_tab2 = fluidRow(
 fr_tab3 = fluidRow(
   column(3, offset=2, selectInput(
     inputId="reg2", choices=c("PH", "PO", "YP"),
-    label="Generated/Fitted Class", selected="PH"),
+    # label="Generated/Fitted Regression Class",
+    label="Regression Class",
+    selected="PH"),
   ),
   column(3, selectInput(
     inputId="cor2", choices=c(0.25, 0.5, 0.75),
@@ -201,17 +189,13 @@ fr_tab3 = fluidRow(
   # Inserting the boxplots for the chosen input:
   # titlePanel("AIC Values for Fitted Survival Copula Models"),
   fluidRow(column(width=2, offset=1,
-    # checkboxGroupInput(inputId="gcop2", label="Generated Copula",
-    #                    choices=gcop, selected=gcop, inline=T),
-    checkboxGroupInput(inputId="gbsl2", label="Generated Baseline",
-                       choices=gbsl, selected="W", inline=T),
+    # checkboxGroupInput(
+    #   inputId="gbsl2", label="Generated Baseline",
+    #   choices=gbsl, selected="W", inline=T),
     checkboxGroupInput(inputId="fcop2", label="Fitted Copula",
                        choices=fcop, selected=fcop, inline=T),
     checkboxGroupInput(inputId="fbsl2", label="Fitted Baseline",
                        choices=fbsl, selected=fbsl, inline=T),
-    # checkboxGroupInput(inputId="coef2", label="Model Parameters",
-    #                    selected=coef, inline=T,
-    #                    choiceNames=coef_uc, choiceValues=coef),
   ),
   column(width=8, mainPanel(plotOutput("aicPlots"))),
   
@@ -243,26 +227,20 @@ fr_tab4 = fluidRow(
   ),
   # column(3, selectInput(
   #   inputId="freg4", choices=c("PH", "PO"),
-  #   label="Fitted Class, Nested into YP", selected="PH"),
+  #   label="Fitted Class, Nested to YP", selected="PH"),
   # ),
   
   # Summary tables for the chosen input:
   # titlePanel("LR Tests for Fitted Survival Copula Models"),
   fluidRow(column(width=2, offset=1,
-    # checkboxGroupInput(inputId="gcop4", label="Generated Copula",
-    #                    choices=gcop, selected=gcop, inline=T),
-    checkboxGroupInput(inputId="gbsl4", label="Generated Baseline",
-                       choices=gbsl, selected="W", inline=T),
-    # checkboxGroupInput(inputId="fcop4", label="Fitted Copula",
-    #                    choices=fcop, selected=fcop, inline=T),
+    # checkboxGroupInput(
+    #   inputId="gbsl4", label="Generated Baseline",
+    #   choices=gbsl, selected="W", inline=T),
     checkboxGroupInput(inputId="fbsl4", label="Fitted Baseline",
                        choices=fbsl, selected=fbsl, inline=T),
     checkboxGroupInput(inputId="freg4",
-                       label="Fitted Class, Nested into YP",
+                       label="Fitted Class, Nested to YP",
                        choices=freg, selected=freg, inline=T),
-    # checkboxGroupInput(inputId="coef4", label="Model Parameters",
-    #                    selected=coef, inline=T,
-    #                    choiceNames=coef_uc, choiceValues=coef),
   ),
   column(width=8, # offset=1,
          mainPanel(dataTableOutput("lrResults"))))
@@ -282,9 +260,9 @@ fr_tab5 = fluidRow(
   # Inserting the boxplots for the chosen input:
   # titlePanel("AIC Values for Fitted Survival Copula Models"),
   fluidRow(column(width=2, offset=1,
-    checkboxGroupInput(
-      inputId="gbsls", label="Generated Baseline",
-      choices=gbsl, selected="W", inline=T),
+    # checkboxGroupInput(
+    #   inputId="gbsls", label="Generated Baseline",
+    #   choices=gbsl, selected="W", inline=T),
     checkboxGroupInput(
       inputId="fbsls", label="Fitted Baseline",
       choices=fbsl, selected=fbsl, inline=T),
@@ -350,15 +328,15 @@ server = function(input, output){
   # Code for output of 1st tab:
   
   # Reading online data:
-  reg_PH_25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_ph025.rds?raw=true"
-  reg_PO_25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_po025.rds?raw=true"
-  reg_YP_25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_yp025.rds?raw=true"
-  reg_PH_50 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_ph050.rds?raw=true"
-  reg_PO_50 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_po050.rds?raw=true"
-  reg_YP_50 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_yp050.rds?raw=true"
-  reg_PH_75 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_ph075.rds?raw=true"
-  reg_PO_75 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_po075.rds?raw=true"
-  reg_YP_75 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_reg_yp075.rds?raw=true"
+  reg_PH_25 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_ph025.rds?raw=true"
+  reg_PO_25 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_po025.rds?raw=true"
+  reg_YP_25 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_yp025.rds?raw=true"
+  reg_PH_50 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_ph050.rds?raw=true"
+  reg_PO_50 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_po050.rds?raw=true"
+  reg_YP_50 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_yp050.rds?raw=true"
+  reg_PH_75 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_ph075.rds?raw=true"
+  reg_PO_75 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_po075.rds?raw=true"
+  reg_YP_75 = "https://github.com/wrmfstat/simsurvcop/blob/main/res_reg_yp075.rds?raw=true"
   
   # Choosing results' data from a given input:
   reg_bigdata = reactive({
@@ -439,21 +417,35 @@ server = function(input, output){
       
       # Filtering our data according to selected options:
       df = df %>% filter(
-        G.Copula %in% input$gcop1, G.Baseline %in% input$gbsl1,
+        Margin %in% input$mar1,
+        G.Copula %in% input$gcop1, # G.Baseline %in% input$gbsl1,
         F.Copula %in% input$fcop1, F.Baseline %in% input$fbsl1,
         # Parameter %in% input$coef1)
         Parameter %in% coef)
       
       # Plotting the boxplots for the relative bias:
-      ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
-        geom_abline(intercept=0, slope=0,
-                    linetype="dashed", color="black") +
-        facet_wrap(~ G.Baseline + F.Baseline) +
-        labs(x="Coefficients", y="Relative Bias (%)") +
-        scale_x_discrete(labels = c(
-          expression(paste(beta[11])), expression(paste(beta[21])),
-          expression(paste(beta[12])), expression(paste(beta[22])))) +
-        theme(legend.position="bottom")
+      if(input$mar1=="M1"){
+        ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
+          geom_abline(intercept=0, slope=0,
+                      linetype="dashed", color="black") +
+          # facet_wrap(~ G.Baseline + F.Baseline) +
+          facet_wrap(~F.Baseline) +
+          labs(x="Coefficients", y="Relative Bias (%)") +
+          scale_x_discrete(labels = c(
+            expression(paste(beta[11])), expression(paste(beta[21])))) +
+          theme(legend.position="bottom")
+      }
+      else{
+        ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
+          geom_abline(intercept=0, slope=0,
+                      linetype="dashed", color="black") +
+          # facet_wrap(~ G.Baseline + F.Baseline) +
+          facet_wrap(~F.Baseline) +
+          labs(x="Coefficients", y="Relative Bias (%)") +
+          scale_x_discrete(labels = c(
+            expression(paste(beta[12])), expression(paste(beta[22])))) +
+          theme(legend.position="bottom")
+      }
     }
     # If we want YP models:
     else{
@@ -465,27 +457,41 @@ server = function(input, output){
       
       # Filtering our data according to selected options:
       df = df %>% filter(
-        G.Copula %in% input$gcop1, G.Baseline %in% input$gbsl1,
+        Margin %in% input$mar1,
+        G.Copula %in% input$gcop1, # G.Baseline %in% input$gbsl1,
         F.Copula %in% input$fcop1, F.Baseline %in% input$fbsl1,
         # Parameter %in% input$coef1)
         Parameter %in% coef)
       
       # Plotting the boxplots for the relative bias:
-      ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
-        geom_abline(intercept=0, slope=0,
-                    linetype="dashed", color = "black") +
-        facet_wrap(~ G.Baseline + F.Baseline) +
-        labs(x="Coefficients", y="Relative Bias (%)") +
-        scale_x_discrete(labels = c(
-          expression(paste(beta[11]^"(S)")),
-          expression(paste(beta[21]^"(S)")),
-          expression(paste(beta[12]^"(S)")),
-          expression(paste(beta[22]^"(S)")),
-          expression(paste(beta[11]^"(L)")),
-          expression(paste(beta[21]^"(L)")),
-          expression(paste(beta[12]^"(L)")),
-          expression(paste(beta[22]^"(L)")))) +
-        theme(legend.position="bottom")
+      if(input$mar1=="M1"){
+        ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
+          geom_abline(intercept=0, slope=0,
+                      linetype="dashed", color = "black") +
+          # facet_wrap(~ G.Baseline + F.Baseline) +
+          facet_wrap(~F.Baseline) +
+          labs(x="Coefficients", y="Relative Bias (%)") +
+          scale_x_discrete(labels = c(
+            expression(paste(beta[11]^"(S)")),
+            expression(paste(beta[21]^"(S)")),
+            expression(paste(beta[11]^"(L)")),
+            expression(paste(beta[21]^"(L)")))) +
+          theme(legend.position="bottom")
+      }
+      else{
+        ggplot(df, aes(x=Parameter, y=RB)) + geom_boxplot() +
+          geom_abline(intercept=0, slope=0,
+                      linetype="dashed", color = "black") +
+          # facet_wrap(~ G.Baseline + F.Baseline) +
+          facet_wrap(~ F.Baseline) +
+          labs(x="Coefficients", y="Relative Bias (%)") +
+          scale_x_discrete(labels = c(
+            expression(paste(beta[12]^"(S)")),
+            expression(paste(beta[22]^"(S)")),
+            expression(paste(beta[12]^"(L)")),
+            expression(paste(beta[22]^"(L)")))) +
+          theme(legend.position="bottom")
+      }
     }
   },
   # width = 900, height = 400)
@@ -499,10 +505,11 @@ server = function(input, output){
                   "\u03B2\U2081\U2082", "\u03B2\U2082\U2082")
       # Fixing on another object to allow updates:
       dft = reg_sumdata() %>% filter(
-        G.Copula %in% input$gcop1, G.Baseline %in% input$gbsl1,
+        Margin %in% input$mar1,
+        G.Copula %in% input$gcop1, # G.Baseline %in% input$gbsl1,
         F.Copula %in% input$fcop1, F.Baseline %in% input$fbsl1,
         Parameter %in% coef_uc)
-      dft = dft[,-c(1,2,3,8)] %>% mutate(
+      dft = dft[,-c(1,2,6)] %>% mutate(
         across(where(is.numeric), round, 4))
     }
     else{
@@ -514,20 +521,20 @@ server = function(input, output){
       
       # Summary tables:
       dft = reg_sumdata() %>% filter(
-        G.Copula %in% input$gcop1, G.Baseline %in% input$gbsl1,
+        Margin %in% input$mar1,
+        G.Copula %in% input$gcop1, # G.Baseline %in% input$gbsl1,
         F.Copula %in% input$fcop1, F.Baseline %in% input$fbsl1,
         Parameter %in% coef_uc)
-      dft = dft[,-c(1,2,3,8)] %>% mutate(
+      dft = dft[,-c(1,2,6)] %>% mutate(
         across(where(is.numeric), round, 4))
     }
   },
-  # options=list(pageLength=12, lengthMenu=c(12, 24, 120))
-  options=list(pageLength=24, lengthMenu=c(24, 48, 240)))
+  options=list(pageLength=6, lengthMenu=c(2, 6)))
   
   # Code for output of 2nd tab:
   
   # Reading online data (make the project public later!):
-  cri = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cri.rds?raw=true"
+  cri = "https://github.com/wrmfstat/simsurvcop/blob/main/res_cri.rds?raw=true"
   
   # Choosing results' data from a given input:
   cri_bigdata = reactive({
@@ -548,14 +555,15 @@ server = function(input, output){
     # Filtering our data according to selected options:
     df = df %>% filter(
       Reg.Class %in% input$reg2, TrueTau %in% input$cor2,
-      G.Copula %in% input$gcop2, G.Baseline %in% input$gbsl2,
+      G.Copula %in% input$gcop2, # G.Baseline %in% input$gbsl2,
       F.Copula %in% input$fcop2, F.Baseline %in% input$fbsl2)
     
     # Plotting the boxplots for the relative bias:
     ggplot(df, aes(x=F.Copula, y=AIC)) + geom_boxplot() +
       geom_abline(intercept=0, slope=0,
                   linetype="dashed", color="black") +
-      facet_wrap(~ G.Baseline + F.Baseline) +
+      # facet_wrap(~ G.Baseline + F.Baseline) +
+      facet_wrap(~F.Baseline) +
       labs(x="Fitted Copula", y="AIC") +
       theme(legend.position="bottom")
   },
@@ -566,78 +574,26 @@ server = function(input, output){
     # Fixing on another object to allow updates:
     dft = cri_sumdata() %>% filter(
       Reg.Class %in% input$reg2, TrueTau %in% input$cor2,
-      G.Copula %in% input$gcop2, G.Baseline %in% input$gbsl2,
+      G.Copula %in% input$gcop2, # G.Baseline %in% input$gbsl2,
       F.Copula %in% input$fcop2, F.Baseline %in% input$fbsl2)
-    dft = dft[,-c(1,2,3,8,10)] %>% mutate(
+    dft = dft[,-c(1,5,7)] %>% mutate(
       across(where(is.numeric), round, 4))
   },
-  # options=list(pageLength=3, lengthMenu=c(3, 6, 30)))
-  options=list(pageLength=15, lengthMenu=c(15, 30)))
+  options=list(pageLength=15, lengthMenu=c(3, 15)))
   
   # Code for output of 3rd tab:
   
-  # Reading online data (make the project public later!):
-  cor_PH_25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cor_ph025.rds?raw=true"
-  cor_PO_25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cor_po025.rds?raw=true"
-  cor_YP_25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cor_yp025.rds?raw=true"
-  cor_PH_50 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cor_ph050.rds?raw=true"
-  cor_PO_50 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cor_po050.rds?raw=true"
-  cor_YP_50 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cor_yp050.rds?raw=true"
-  cor_PH_75 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cor_ph075.rds?raw=true"
-  cor_PO_75 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cor_po075.rds?raw=true"
-  cor_YP_75 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_exc_cop/res_cor_yp075.rds?raw=true"
+  # Reading online data:
+  corr = "https://github.com/wrmfstat/simsurvcop/blob/main/res_tau.rds?raw=true"
   
   # Choosing results' data from a given input:
   cor_bigdata = reactive({
-    if(input$reg3=="PH"){
-      switch(input$cor3,
-             # If reading online:
-             `0.25` = try(readRDS(url(cor_PH_25)), TRUE),
-             `0.5` = try(readRDS(url(cor_PH_50)), TRUE),
-             `0.75` = try(readRDS(url(cor_PH_75)), TRUE)
-      )
-    }
-    else if(input$reg3=="PO"){
-      switch(input$cor3,
-             # If reading online:
-             `0.25` = try(readRDS(url(cor_PO_25)), TRUE),
-             `0.5` = try(readRDS(url(cor_PO_50)), TRUE),
-             `0.75` = try(readRDS(url(cor_PO_75)), TRUE)
-      )
-    }
-    else{
-      switch(input$cor3,
-             # If reading online:
-             `0.25` = try(readRDS(url(cor_YP_25)), TRUE),
-             `0.5` = try(readRDS(url(cor_YP_50)), TRUE),
-             `0.75` = try(readRDS(url(cor_YP_75)), TRUE)
-      )
-    }
+    try(readRDS(url(corr)), TRUE)
   })
   
   # Choosing summary table data from a given input:
   cor_sumdata = reactive({
-    if(input$reg3=="PH"){
-      switch(input$cor3,
-             `0.25` = tt %>% filter(Reg.Class=="PH" & TrueTau==0.25),
-             `0.5` = tt %>% filter(Reg.Class=="PH" & TrueTau==0.5),
-             `0.75` = tt %>% filter(Reg.Class=="PH" & TrueTau==0.75)
-      )
-    }
-    else if(input$reg3=="PO"){
-      switch(input$cor3,
-             `0.25` = tt %>% filter(Reg.Class=="PO" & TrueTau==0.25),
-             `0.5` = tt %>% filter(Reg.Class=="PO" & TrueTau==0.5),
-             `0.75` = tt %>% filter(Reg.Class=="PO" & TrueTau==0.75)
-      )
-    }
-    else{
-      switch(input$cor3,
-             `0.25` = tt %>% filter(Reg.Class=="YP" & TrueTau==0.25),
-             `0.5` = tt %>% filter(Reg.Class=="YP" & TrueTau==0.5),
-             `0.75` = tt %>% filter(Reg.Class=="YP" & TrueTau==0.75)
-      )
-    }
+    tt
   })
   
   # First, open the output environments!
@@ -651,16 +607,17 @@ server = function(input, output){
     
     # Filtering our data according to selected options:
     df = df %>% filter(
-      G.Copula %in% input$gcop3, G.Baseline %in% input$gbsl3,
+      TrueTau %in% input$cor3,
+      G.Copula %in% input$gcop3, # G.Baseline %in% input$gbsl3,
       F.Copula %in% input$fcop3, F.Baseline %in% input$fbsl3,
-      # Parameter %in% input$coef3)
-      Parameter %in% coef)
+      Reg.Class %in% input$reg3, Parameter %in% coef)
     
     # Plotting the boxplots for the relative bias:
     ggplot(df, aes(x=F.Copula, y=RB)) + geom_boxplot() +
       geom_abline(intercept=0, slope=0,
                   linetype="dashed", color="black") +
-      facet_wrap(~ G.Baseline + F.Baseline) +
+      # facet_wrap(~ G.Baseline + F.Baseline) +
+      facet_wrap(~F.Baseline)
       labs(x="Fitted Copula", y="Relative Bias (%)") +
       # scale_x_discrete(labels = c(expression(paste(tau)))) +
       theme(legend.position="bottom")
@@ -673,14 +630,14 @@ server = function(input, output){
     coef_uc = c("\u03C4")
     # Fixing on another object to allow updates:
     dft = cor_sumdata() %>% filter(
-      G.Copula %in% input$gcop3, G.Baseline %in% input$gbsl3,
+      TrueTau %in% input$cor3,
+      G.Copula %in% input$gcop3, # G.Baseline %in% input$gbsl3,
       F.Copula %in% input$fcop3, F.Baseline %in% input$fbsl3,
-      Parameter %in% coef_uc)
-    dft = dft[,-c(1,2,3,8,12,13,14)] %>% mutate(
+      Reg.Class %in% input$reg3, Parameter %in% coef_uc)
+    dft = dft[,-c(1,5)] %>% mutate(
       across(where(is.numeric), round, 4))
   },
-  # options=list(pageLength=3, lengthMenu=c(3, 6, 30)))
-  options=list(pageLength=15, lengthMenu=c(15, 30)))
+  options=list(pageLength=15, lengthMenu=c(3, 15)))
   
   # Code for output of 4th tab:
   
@@ -696,22 +653,21 @@ server = function(input, output){
     dft = lrt_sumdata() %>% filter(
       Copula %in% input$gcop4, TrueTau %in% input$cor4,
       G.Reg.Class %in% input$greg4, F.Reg.Class %in% input$freg4,
-      G.Baseline %in% input$gbsl4, F.Baseline %in% input$fbsl4)
-    dft = dft[,-c(1,2,3)] %>% mutate(
+      # G.Baseline %in% input$gbsl4,
+      F.Baseline %in% input$fbsl4)
+    dft = dft[,-1] %>% mutate(
       across(where(is.numeric), round, 4))
   },
-  # options=list(pageLength=3, lengthMenu=c(3, 6, 30)))
-  options=list(pageLength=6, lengthMenu=c(6, 10)))
+  options=list(pageLength=6, lengthMenu=c(2, 6)))
   
   # Code for output of 5th tab:
   
   # Reading online data (make the project public later!):
-  ct_ol25 = "https://github.com/wrmfstat/shinyCopRegEst/blob/master/res_ct/res_ct.rds?raw=true"
-  ct_25 = try(readRDS(url(ct_ol25)), TRUE)
+  ct = "https://github.com/wrmfstat/simsurvcop/blob/main/res_ct.rds?raw=true"
   
   # Choosing results' data from a given input:
   ct_bigdata = reactive({
-    ct_25
+    try(readRDS(url(ct)), TRUE)
   })
   
   # Choosing summary table data from a given input:
@@ -728,12 +684,14 @@ server = function(input, output){
     # Filtering our data according to selected options:
     df = df %>% filter(
       Margin %in% input$margs, Copula %in% input$gcops,
-      G.Baseline %in% input$gbsls, F.Baseline %in% input$fbsls)
+      # G.Baseline %in% input$gbsls,
+      F.Baseline %in% input$fbsls)
     
     # Plotting the boxplots for the relative bias:
     ggplot(df) + geom_boxplot(aes(x=Copula, y=RB)) +
       xlab("Copula") + ylab("Relative Bias") +
-      facet_wrap(~ G.Baseline + F.Baseline) +
+      # facet_wrap(~ G.Baseline + F.Baseline) +
+      facet_wrap(~F.Baseline) +
       geom_hline(yintercept=0, linetype="dashed", color="black") +
       theme(legend.position="bottom")
   },
@@ -746,12 +704,12 @@ server = function(input, output){
       Margin %in% input$margs,
       Copula %in% input$gcops, # TrueTau %in% input$cor,
       # G.Reg.Class %in% input$greg, F.Reg.Class %in% input$freg,
-      G.Baseline %in% input$gbsls, F.Baseline %in% input$fbsls)
-    dft = dft[,-c(2,3,4,5,9)] %>% mutate(
+      # G.Baseline %in% input$gbsls,
+      F.Baseline %in% input$fbsls)
+    dft = dft[,-c(2,3,6)] %>% mutate(
       across(where(is.numeric), round, 4))
   },
-  # options=list(pageLength=3, lengthMenu=c(3, 6, 30)))
-  options=list(pageLength=3, lengthMenu=c(3, 6)))
+  options=list(pageLength=3, lengthMenu=3))
 }
 
 # Running all tabs in a single dashboard:
