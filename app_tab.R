@@ -617,7 +617,7 @@ server = function(input, output){
       geom_abline(intercept=0, slope=0,
                   linetype="dashed", color="black") +
       # facet_wrap(~ G.Baseline + F.Baseline) +
-      facet_wrap(~F.Baseline)
+      facet_wrap(~F.Baseline) +
       labs(x="Fitted Copula", y="Relative Bias (%)") +
       # scale_x_discrete(labels = c(expression(paste(tau)))) +
       theme(legend.position="bottom")
