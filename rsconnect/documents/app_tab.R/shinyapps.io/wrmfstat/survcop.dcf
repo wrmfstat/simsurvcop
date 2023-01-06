@@ -1,0 +1,14 @@
+name: survcop
+title: survcop
+username:
+account: wrmfstat
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7986707
+bundleId: 6705680
+url: https://wrmfstat.shinyapps.io/survcop/
+when: 1673040422.41752
+lastSyncTime: 1673040422.41752
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: anova_PH.rds|anova_PO.rds|anova_YP.rds|app1reg.R|app2cri.R|app3cor.R|app4lrt.R|app5ct.R|res_cri.rds|res_ct.rds|res_reg_ph025.rds|res_reg_ph050.rds|res_reg_ph075.rds|res_reg_po025.rds|res_reg_po050.rds|res_reg_po075.rds|res_reg_yp025.rds|res_reg_yp050.rds|res_reg_yp075.rds|res_tau.rds|tab_cri.rds|tab_ct.rds|tab_lrt.rds|tab_reg.rds|tab_tau.rds
